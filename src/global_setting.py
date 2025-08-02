@@ -6,7 +6,6 @@ FILES_PATH = [
     "data/ingestion_storage/test_document.txt",
     "data/ingestion_storage/test_rag_system.txt"
 ]
-INDEX_STORAGE = "data/index_storage"
 SCORES_FILE = "data/user_storage/scores.json"
 
 # Weaviate Configuration

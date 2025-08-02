@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Import từ thư mục src
-from src.global_setting import WEAVIATE_URL, WEAVIATE_CLASS_NAME, INDEX_STORAGE
+from src.global_setting import WEAVIATE_URL, WEAVIATE_CLASS_NAME
 
 # Cấu hình API key từ environment variable
 google_api_key = os.getenv("GOOGLE_API_KEY")
@@ -27,8 +27,8 @@ if not google_api_key:
 
 genai.configure(api_key=google_api_key)
 
-def query_vector_database(query_text: str, top_k: int = 5, use_cached_index: bool = True):
-    """Query vector database từ Weaviate với tùy chọn sử dụng cached index"""
+def query_vector_database(query_text: str, top_k: int = 5):
+    """Query vector database từ Weaviate"""
     
     try:
         # 1. Kết nối Weaviate với client v4
@@ -52,38 +52,19 @@ def query_vector_database(query_text: str, top_k: int = 5, use_cached_index: boo
             temperature=0.1
         )
         
-        # 4. Tối ưu: Sử dụng cached index nếu có
-        if use_cached_index:
-            index_storage_path = os.path.join(project_root, INDEX_STORAGE)
-            if os.path.exists(index_storage_path) and os.listdir(index_storage_path):
-                print(f"🚀 Loading cached index from: {index_storage_path}")
-                
-                # Load từ cached storage (không cần vector store khi load từ disk)
-                storage_context = StorageContext.from_defaults(persist_dir=index_storage_path)
-                
-                index = VectorStoreIndex.from_storage_context(
-                    storage_context=storage_context,
-                    embed_model=google_embedding
-                )
-                print("✅ Successfully loaded cached index!")
-            else:
-                print("⚠️ No cached index found, rebuilding from Weaviate...")
-                use_cached_index = False
+        # 4. Build index từ Weaviate (Weaviate tự quản lý index)
+        print("🔄 Connecting to Weaviate vector store...")
+        vector_store = WeaviateVectorStore(
+            weaviate_client=weaviate_client,
+            index_name=WEAVIATE_CLASS_NAME,
+            text_key="content"
+        )
         
-        # 5. Fallback: Rebuild index từ Weaviate (chậm hơn)
-        if not use_cached_index:
-            print("🔄 Rebuilding index from Weaviate vector store...")
-            vector_store = WeaviateVectorStore(
-                weaviate_client=weaviate_client,
-                index_name=WEAVIATE_CLASS_NAME,
-                text_key="content"
-            )
-            
-            storage_context = StorageContext.from_defaults(vector_store=vector_store)
-            index = VectorStoreIndex.from_vector_store(
-                vector_store=vector_store,
-                embed_model=google_embedding
-            )
+        storage_context = StorageContext.from_defaults(vector_store=vector_store)
+        index = VectorStoreIndex.from_vector_store(
+            vector_store=vector_store,
+            embed_model=google_embedding
+        )
         
         # 6. Tạo query engine với LLM và thực hiện truy vấn
         query_engine = index.as_query_engine(
@@ -117,56 +98,6 @@ def query_vector_database(query_text: str, top_k: int = 5, use_cached_index: boo
         import traceback
         traceback.print_exc()
         return None
-
-def build_and_cache_index():
-    """Build index một lần và cache để sử dụng sau"""
-    try:
-        print("🔧 Building and caching index for faster queries...")
-        
-        # Kết nối Weaviate
-        weaviate_client = weaviate.connect_to_local(host="localhost", port=8080)
-        
-        if not weaviate_client.is_ready():
-            raise Exception("Weaviate is not ready")
-        
-        # Setup embedding
-        google_embedding = GoogleGenAIEmbedding(
-            model_name="models/embedding-001",
-            api_key=google_api_key
-        )
-        
-        # Setup vector store
-        vector_store = WeaviateVectorStore(
-            weaviate_client=weaviate_client,
-            index_name=WEAVIATE_CLASS_NAME,
-            text_key="content"
-        )
-        
-        # Build index
-        print("📊 Building index from Weaviate...")
-        storage_context = StorageContext.from_defaults(vector_store=vector_store)
-        index = VectorStoreIndex.from_vector_store(
-            vector_store=vector_store,
-            embed_model=google_embedding
-        )
-        
-        # Cache index
-        index_storage_path = os.path.join(project_root, INDEX_STORAGE)
-        os.makedirs(index_storage_path, exist_ok=True)
-        index.storage_context.persist(persist_dir=index_storage_path)
-        
-        weaviate_client.close()
-        
-        print(f"✅ Index cached successfully at: {index_storage_path}")
-        print("🚀 Future queries will be much faster!")
-        
-        return True
-        
-    except Exception as e:
-        print(f"❌ Error building index: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
 
 def check_weaviate_status():
     """Kiểm tra trạng thái Weaviate và số lượng documents"""
@@ -206,21 +137,6 @@ if __name__ == "__main__":
     # Kiểm tra trạng thái Weaviate
     check_weaviate_status()
     
-    # Kiểm tra xem có cached index không
-    index_storage_path = os.path.join(project_root, INDEX_STORAGE)
-    has_cached_index = os.path.exists(index_storage_path) and os.listdir(index_storage_path)
-    
-    if has_cached_index:
-        print("✅ Cached index found - queries will be fast!")
-    else:
-        print("⚠️ No cached index found")
-        build_choice = input("🔧 Build and cache index now for faster queries? (y/n): ").strip().lower()
-        if build_choice in ['y', 'yes']:
-            if build_and_cache_index():
-                print("🎉 Index cached successfully!")
-            else:
-                print("❌ Failed to cache index, will rebuild on each query")
-    
     print("\n" + "=" * 50)
     
     # Một số câu hỏi mẫu
@@ -236,6 +152,7 @@ if __name__ == "__main__":
         print(f"{i}. {query}")
     
     print("\n💡 Tips:")
+    print("- Weaviate automatically manages indexing - no cache needed!")
     print("- First query might be slower (building connections)")
     print("- Subsequent queries will be faster with cached index")
     print("- Type 'quit' to exit")

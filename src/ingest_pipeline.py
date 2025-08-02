@@ -28,7 +28,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Import từ thư mục src
-from global_setting import STORAGE_PATH, FILES_PATH, CACHE_FILE, WEAVIATE_URL, WEAVIATE_CLASS_NAME, INDEX_STORAGE
+from global_setting import STORAGE_PATH, FILES_PATH, CACHE_FILE, WEAVIATE_URL, WEAVIATE_CLASS_NAME
 from prompts import CUSTORM_SUMMARY_EXTRACT_TEMPLATE
 
 # Cấu hình API key từ environment variable
@@ -106,7 +106,7 @@ def ingest_documents():
     
     # 1. Setup Weaviate client
     weaviate_client = setup_weaviate_client()
-    # weaviate_client = None  # Tạm thời tắt Weaviate
+    # weaviate_client = None  # Tạm thời tắt Weaviate để test nhanh
     
     # 2. Tạo đường dẫn tuyệt đối cho FILES_PATH
     absolute_files_path = []
@@ -185,7 +185,7 @@ def ingest_documents():
             # Tạo storage context
             storage_context = StorageContext.from_defaults(vector_store=vector_store)
             
-            # Tạo VectorStoreIndex và lưu vào Weaviate
+            # Tạo VectorStoreIndex và insert data vào Weaviate
             print("📊 Creating vector index and inserting into Weaviate...")
             index = VectorStoreIndex(
                 nodes=nodes,
@@ -193,13 +193,8 @@ def ingest_documents():
                 embed_model=google_embedding
             )
             
-            # Lưu index để sử dụng sau
-            index_storage_path = os.path.join(project_root, INDEX_STORAGE)
-            os.makedirs(index_storage_path, exist_ok=True)
-            index.storage_context.persist(persist_dir=index_storage_path)
-            
             print(f"✅ Successfully saved to Weaviate!")
-            print(f"   - Index saved to: {index_storage_path}")
+            print(f"   - Data inserted into Weaviate collection: {WEAVIATE_CLASS_NAME}")
             
             # Kiểm tra số lượng objects trong Weaviate
             try:
