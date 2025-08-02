@@ -1,0 +1,5 @@
+Đây là một tài liệu thử nghiệm để kiểm tra cách hoạt động của cache trong hệ thống RAG.
+
+Nội dung này sẽ được vector hóa và lưu vào cache.
+
+Khi chạy lại pipeline, dữ liệu này sẽ được thêm vào cache hiện tại mà không xóa dữ liệu cũ về Luật Lao động.

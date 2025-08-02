@@ -1,0 +1,53 @@
+# Core LlamaIndex packages
+llama-index==0.11.4
+llama-index-core==0.13.0
+
+# Vector Database
+llama-index-vector-stores-weaviate==0.1.9
+weaviate-client==4.4.0
+
+# Embedding providers (Updated to use Google GenAI)
+llama-index-embeddings-google==0.4.0
+llama-index-embeddings-google-genai==0.3.0
+
+# LLM providers (Updated to use Google GenAI)
+llama-index-llms-google-genai==0.3.0
+
+# Document loaders and readers
+llama-index-readers-file==0.2.2
+
+# Google AI SDK
+google-generativeai==0.7.2
+
+# Environment management
+python-dotenv==1.0.0
+
+# Jupyter notebook support (for .ipynb files)
+jupyter==1.0.0
+notebook==7.0.6
+ipykernel==6.25.2
+
+# Data processing and utilities
+numpy==1.24.3
+pandas==2.0.3
+
+# Document processing
+python-docx==0.8.11
+PyPDF2==3.0.1
+pypdf==3.15.5
+
+# Web framework (if using Streamlit)
+streamlit==1.28.0
+
+# Environment management
+python-dotenv==1.0.0
+
+# File handling and utilities
+pathlib2==2.3.7
+
+# Optional: For better text processing
+nltk==3.8.1
+spacy==3.7.2
+
+# Optional: For advanced document parsing
+unstructured==0.10.30

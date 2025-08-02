@@ -1,0 +1,42 @@
+RAG Legal Consultation System - Test Document
+
+Đây là document test để kiểm tra hệ thống RAG Legal Consultation.
+
+1. Thông tin về độ tuổi lao động:
+   - Độ tuổi lao động tối thiểu là 15 tuổi
+   - Người dưới 18 tuổi không được làm các công việc nặng nhọc, độc hại
+   - Tuổi nghỉ hưu nam là 62 tuổi, nữ là 60 tuổi
+
+2. Quy định về thời gian làm việc:
+   - Thời gian làm việc bình thường không quá 8 giờ/ngày và 48 giờ/tuần
+   - Được nghỉ ít nhất 24 giờ liên tục trong tuần
+   - Làm thêm giờ không quá 4 giờ/ngày và 200 giờ/năm
+
+3. Nghỉ phép năm:
+   - Người lao động được nghỉ phép có lương 12 ngày/năm
+   - Cứ làm việc được 5 năm thì tăng thêm 1 ngày nghỉ phép
+   - Có thể tích lũy nghỉ phép sang năm sau tối đa 3 ngày
+
+4. Quyền của người lao động:
+   - Được trả lương đầy đủ, đúng hạn
+   - Được bảo hiểm xã hội, y tế, thất nghiệp
+   - Được đào tạo nâng cao trình độ
+   - Được tham gia công đoàn
+
+5. Nghĩa vụ của người lao động:
+   - Thực hiện đúng nội dung hợp đồng lao động
+   - Tuân thủ nội quy lao động
+   - Bảo vệ tài sản của doanh nghiệp
+   - Giữ bí mật kinh doanh
+
+6. Chấm dứt hợp đồng lao động:
+   - Hết thời hạn hợp đồng
+   - Hoàn thành công việc đã thỏa thuận
+   - Thỏa thuận của hai bên
+   - Vi phạm nghiêm trọng nội quy
+
+Test queries để kiểm tra:
+- "Độ tuổi lao động tối thiểu là bao nhiêu?"
+- "Quy định về thời gian làm việc như thế nào?"
+- "Nghỉ phép năm được bao nhiêu ngày?"
+- "Quyền và nghĩa vụ của người lao động là gì?"
