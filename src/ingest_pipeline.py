@@ -60,37 +60,48 @@ def setup_weaviate_client():
         # Tạo collection nếu chưa có (v4 sử dụng collections thay vì classes)
         from weaviate.classes.config import Configure
         
-        if not client.collections.exists(WEAVIATE_CLASS_NAME):
-            client.collections.create(
-                name=WEAVIATE_CLASS_NAME,
-                description="Legal documents for RAG system",
-                vectorizer_config=Configure.Vectorizer.none(),  # Chúng ta sẽ tự tạo vector
-                properties=[
-                    weaviate.classes.config.Property(
-                        name="content",
-                        data_type=weaviate.classes.config.DataType.TEXT,
-                        description="The main content of the document"
-                    ),
-                    weaviate.classes.config.Property(
-                        name="filename", 
-                        data_type=weaviate.classes.config.DataType.TEXT,
-                        description="Name of the source file"
-                    ),
-                    weaviate.classes.config.Property(
-                        name="file_path",
-                        data_type=weaviate.classes.config.DataType.TEXT, 
-                        description="Path to the source file"
-                    ),
-                    weaviate.classes.config.Property(
-                        name="chunk_id",
-                        data_type=weaviate.classes.config.DataType.TEXT,
-                        description="Unique identifier for this text chunk"
-                    )
-                ]
-            )
-            print(f"✓ Created Weaviate collection: {WEAVIATE_CLASS_NAME}")
-        else:
-            print(f"✓ Weaviate collection already exists: {WEAVIATE_CLASS_NAME}")
+        # Xóa collection cũ nếu tồn tại (để update schema cho hybrid search)
+        if client.collections.exists(WEAVIATE_CLASS_NAME):
+            print(f"⚠️ Collection {WEAVIATE_CLASS_NAME} exists - recreating for hybrid search support...")
+            client.collections.delete(WEAVIATE_CLASS_NAME)
+        
+        # Tạo collection mới với BM25 support
+        client.collections.create(
+            name=WEAVIATE_CLASS_NAME,
+            description="Legal documents for RAG system with hybrid search support",
+            vectorizer_config=Configure.Vectorizer.none(),  # Chúng ta sẽ tự tạo vector
+            # Enable BM25 cho hybrid search với cấu hình đơn giản
+            inverted_index_config=Configure.inverted_index(
+                index_null_state=True,
+                index_property_length=True,
+                index_timestamps=True
+            ),
+            properties=[
+                weaviate.classes.config.Property(
+                    name="content",
+                    data_type=weaviate.classes.config.DataType.TEXT,
+                    description="The main content of the document",
+                    # Enable text search trên field này
+                    tokenization=weaviate.classes.config.Tokenization.WORD
+                ),
+                weaviate.classes.config.Property(
+                    name="filename", 
+                    data_type=weaviate.classes.config.DataType.TEXT,
+                    description="Name of the source file"
+                ),
+                weaviate.classes.config.Property(
+                    name="file_path",
+                    data_type=weaviate.classes.config.DataType.TEXT, 
+                    description="Path to the source file"
+                ),
+                weaviate.classes.config.Property(
+                    name="chunk_id",
+                    data_type=weaviate.classes.config.DataType.TEXT,
+                    description="Unique identifier for this text chunk"
+                )
+            ]
+        )
+        print(f"✓ Created Weaviate collection with hybrid search support: {WEAVIATE_CLASS_NAME}")
         
         return client
     
@@ -151,8 +162,8 @@ def ingest_documents():
     pipeline = IngestionPipeline(
         transformations=[
             TokenTextSplitter(
-                chunk_size=512,
-                chunk_overlap=20
+                chunk_size=384,  # Quay lại 384 từ 256 để có chunks với context tốt hơn
+                chunk_overlap=40  # Quay lại 40 từ 50 (~10.4% overlap - tối ưu)
             ),
             # Tạm thời tắt SummaryExtractor để tránh vượt quota Gemini
             # SummaryExtractor(

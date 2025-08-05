@@ -99,6 +99,119 @@ def query_vector_database(query_text: str, top_k: int = 5):
         traceback.print_exc()
         return None
 
+def query_hybrid_search(query_text: str, top_k: int = 5, alpha: float = 0.6):
+    """
+    Thực hiện hybrid search trực tiếp với Weaviate
+    alpha = 0.0: chỉ BM25 (keyword search) 
+    alpha = 1.0: chỉ vector search (semantic)
+    alpha = 0.7: kết hợp 70% vector + 30% BM25 (recommended)
+    """
+    try:
+        # 1. Kết nối Weaviate
+        weaviate_client = weaviate.connect_to_local(host="localhost", port=8080)
+        
+        if not weaviate_client.is_ready():
+            raise Exception("Weaviate is not ready")
+        
+        print(f"✓ Connected to Weaviate for hybrid search")
+        
+        # 2. Setup embedding model
+        google_embedding = GoogleGenAIEmbedding(
+            model_name="models/embedding-001",
+            api_key=google_api_key
+        )
+        
+        # 3. Setup LLM
+        google_llm = GoogleGenAI(
+            model="models/gemini-1.5-flash",
+            api_key=google_api_key,
+            temperature=0.1
+        )
+        
+        # 4. Tạo query vector
+        print("🔄 Creating query vector...")
+        query_vector = google_embedding.get_query_embedding(query_text)
+        
+        # 5. Thực hiện hybrid search trực tiếp với Weaviate
+        collection = weaviate_client.collections.get(WEAVIATE_CLASS_NAME)
+        
+        print(f"🔍 Hybrid Search: {query_text}")
+        print(f"⚖️ Alpha: {alpha} (Vector: {alpha*100:.0f}%, BM25: {(1-alpha)*100:.0f}%)")
+        
+        # Hybrid search query
+        search_results = collection.query.hybrid(
+            query=query_text,  # Text query cho BM25
+            vector=query_vector,  # Vector query cho semantic search
+            alpha=alpha,  # Tỷ lệ kết hợp
+            limit=top_k
+            # Bỏ return_metadata vì có thể gây lỗi tham số
+        )
+        
+        print(f"📊 Found {len(search_results.objects)} results")
+        
+        # 6. Tạo context từ kết quả tìm kiếm
+        contexts = []
+        sources_info = []
+        
+        for i, obj in enumerate(search_results.objects, 1):
+            content = obj.properties.get('content', '')
+            filename = obj.properties.get('filename', 'Unknown')
+            # Sửa cách lấy score để tránh lỗi
+            try:
+                score = obj.metadata.score if hasattr(obj.metadata, 'score') and obj.metadata.score else 0.0
+            except:
+                score = 0.0
+            
+            contexts.append(content)
+            sources_info.append({
+                'content': content,
+                'filename': filename,
+                'score': score,
+                'rank': i
+            })
+            
+        #     print(f"\n{i}. Score: {score:.4f}")
+        #     print(f"   Content: {content[:200]}...")
+        #     print(f"   Source: {filename}")
+        
+        # 7. Tạo prompt cho LLM với context
+        if contexts:
+            combined_context = "\n\n".join(contexts)
+            
+            prompt = f"""Dựa trên thông tin sau đây, hãy trả lời câu hỏi một cách chính xác và chi tiết:
+
+Context:
+{combined_context}
+
+Câu hỏi: {query_text}
+
+Hãy trả lời dựa trên thông tin được cung cấp. Nếu không có thông tin liên quan, hãy nói rõ là không có thông tin."""
+            
+            print(f"\n🤖 Generating answer with LLM...")
+            llm_response = google_llm.complete(prompt)
+            
+            # print(f"\n📋 Hybrid Search Answer: {llm_response.text}")
+            
+            # Đóng kết nối
+            weaviate_client.close()
+            
+            return {
+                'answer': llm_response.text,
+                'sources': sources_info,
+                'search_type': 'hybrid',
+                'alpha': alpha
+            }
+        else:
+            print("❌ No relevant results found")
+            weaviate_client.close()
+            return None
+            
+    except Exception as e:
+        print(f"❌ Error in hybrid search: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
 def check_weaviate_status():
     """Kiểm tra trạng thái Weaviate và số lượng documents"""
     try:
@@ -151,10 +264,10 @@ if __name__ == "__main__":
     for i, query in enumerate(sample_queries, 1):
         print(f"{i}. {query}")
     
-    print("\n💡 Tips:")
-    print("- Weaviate automatically manages indexing - no cache needed!")
-    print("- First query might be slower (building connections)")
-    print("- Subsequent queries will be faster with cached index")
+    print("\n💡 Search Options:")
+    print("- 's' or 'semantic': Semantic search only (vector similarity)")
+    print("- 'h' or 'hybrid': Hybrid search (vector + keyword/BM25)")
+    print("- Hybrid search is recommended for better accuracy!")
     print("- Type 'quit' to exit")
     
     print("\n" + "=" * 50)
@@ -162,17 +275,40 @@ if __name__ == "__main__":
     # Interactive query
     while True:
         try:
-            query = input("\n💬 Enter your question (or 'quit' to exit): ").strip()
+            print("\n� Choose search method:")
+            print("1. Semantic Search (vector only)")
+            print("2. Hybrid Search (vector + BM25) - Recommended")
             
-            if query.lower() in ['quit', 'exit', 'q']:
+            search_choice = input("Select option (1/2) or enter question directly: ").strip()
+            
+            # Nếu user nhập số, chọn search method
+            if search_choice in ['1', '2']:
+                query = input("\n💬 Enter your question: ").strip()
+                
+                if query.lower() in ['quit', 'exit', 'q']:
+                    print("👋 Goodbye!")
+                    break
+                
+                if not query:
+                    continue
+                
+                if search_choice == '1':
+                    print("\n🔍 Using Semantic Search...")
+                    response = query_vector_database(query)
+                else:
+                    print("\n🔍 Using Hybrid Search...")
+                    response = query_hybrid_search(query, alpha=0.7)
+                    
+            # Nếu user nhập trực tiếp câu hỏi, dùng hybrid search mặc định
+            elif search_choice and search_choice.lower() not in ['quit', 'exit', 'q']:
+                query = search_choice
+                print("\n🔍 Using Hybrid Search (default)...")
+                response = query_hybrid_search(query, alpha=0.7)
+            elif search_choice.lower() in ['quit', 'exit', 'q']:
                 print("👋 Goodbye!")
                 break
-            
-            if not query:
+            else:
                 continue
-            
-            # Thực hiện truy vấn
-            response = query_vector_database(query)
             
             print("\n" + "-" * 50)
             
