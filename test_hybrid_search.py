@@ -13,7 +13,6 @@ def test_hybrid_search_simple():
     
     # Các câu hỏi test
     test_queries = [
-        "Người tham gia lao động phải có độ tuổi tối thiểu là bao nhiêu?",
         "Thời gian làm việc bình thường là bao nhiêu giờ?", 
         "Nghỉ phép năm được mấy ngày?",
         "Quyền và nghĩa vụ của người lao động là gì?",
@@ -36,11 +35,11 @@ def test_hybrid_search_simple():
             if result:
                 print(f"⏱️ Time: {search_time:.2f}s")
                 print(f"📋 Answer: {result['answer']}")
-                print(f"📊 Found {len(result['sources'])} sources")
+                # print(f"📊 Found {len(result['sources'])} sources")
                 
                 # In ra scores của sources
-                for j, source in enumerate(result['sources'], 1):
-                    print(f"   {j}. Score: {source['score']:.4f}")
+                # for j, source in enumerate(result['sources'], 1):
+                #     print(f"   {j}. Score: {source['score']:.4f}")
             else:
                 print("❌ No results found")
                 

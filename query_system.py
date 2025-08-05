@@ -170,9 +170,9 @@ def query_hybrid_search(query_text: str, top_k: int = 5, alpha: float = 0.6):
                 'rank': i
             })
             
-            print(f"\n{i}. Score: {score:.4f}")
-            print(f"   Content: {content[:200]}...")
-            print(f"   Source: {filename}")
+        #     print(f"\n{i}. Score: {score:.4f}")
+        #     print(f"   Content: {content[:200]}...")
+        #     print(f"   Source: {filename}")
         
         # 7. Tạo prompt cho LLM với context
         if contexts:
@@ -190,7 +190,7 @@ Hãy trả lời dựa trên thông tin được cung cấp. Nếu không có th
             print(f"\n🤖 Generating answer with LLM...")
             llm_response = google_llm.complete(prompt)
             
-            print(f"\n📋 Hybrid Search Answer: {llm_response.text}")
+            # print(f"\n📋 Hybrid Search Answer: {llm_response.text}")
             
             # Đóng kết nối
             weaviate_client.close()
